@@ -74,7 +74,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          repository: QuestCraftPlusPlus/Wrapper-IL2CPP
+          repository: alex89912/Wrapper-IL2CPP
           token: ${{ secrets.PERSONAL_TOKEN }}
       - name: Grab IL2CPP changes
         uses: actions/download-artifact@v4
@@ -99,5 +99,5 @@ jobs:
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
-          repository: QuestCraftPlusPlus/Wrapper-IL2CPP
+          repository: alex89912/Wrapper-IL2CPP
           github_token: ${{ secrets.PERSONAL_TOKEN }}
