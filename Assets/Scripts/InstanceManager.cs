@@ -21,6 +21,7 @@ public class InstanceManager : MonoBehaviour
     public TMP_InputField instanceName;
     public Toggle defaultModsToggle;
     public TMP_Dropdown versionDropdown;
+    public TMP_Dropdown loaderDropdown;
     public WindowHandler windowHandler;
     public Texture2D errorTexture;
 
@@ -29,11 +30,32 @@ public class InstanceManager : MonoBehaviour
     [SerializeField] private GameObject modArray;
     [SerializeField] private APIHandler apiHandler;
     
+    public void Start()
+    {
+        List<string> modLoaders = new List<string>
+        {
+            "Fabric",
+            "Forge",
+            "Quilt",
+            "NeoForge"
+        };
+        
+        loaderDropdown.AddOptions(modLoaders);
+    }
     
+    public void UpdateMenu()
+    {
+        string selectedModloader = loaderDropdown.options[loaderDropdown.value].text;
+        defaultModsToggle.interactable = selectedModloader is "Fabric" or "Quilt";
+        defaultModsToggle.isOn = selectedModloader is "Fabric" or "Quilt";
+    }
+
     public void CreateCustomInstance()
     {
         try
         {
+            string selectedModloader = loaderDropdown.options[loaderDropdown.value].text;
+
             instanceName.text = instanceName.text.Trim();
             if (instanceName.text == "")
             {
@@ -47,7 +69,7 @@ public class InstanceManager : MonoBehaviour
 
             if (instanceNames.Add(instanceName.text.ToLower()))
             {
-                JNIStorage.apiClass.CallStatic<AndroidJavaObject>("createNewInstance", JNIStorage.activity, JNIStorage.instancesObj, instanceName.text, defaultModsToggle.isOn, versionDropdown.options[versionDropdown.value].text, null);
+                JNIStorage.apiClass.CallStatic<AndroidJavaObject>("createNewInstance", JNIStorage.activity, JNIStorage.instancesObj, instanceName.text, defaultModsToggle.isOn, versionDropdown.options[versionDropdown.value].text, selectedModloader, null);
                 JNIStorage.instance.uiHandler.SetAndShowError(instanceName.text + " is now being created.");
             
                 JNIStorage.instance.UpdateInstances();
@@ -72,8 +94,7 @@ public class InstanceManager : MonoBehaviour
             {
                 PojlibInstance instance = PojlibInstance.Parse(instanceObj);
                 GameObject instanceGameObject = Instantiate(instancePrefab, new Vector3(-10, -10, -10), Quaternion.identity);
-                instanceGameObject.transform.GetChild(1).GetComponent<TextMeshProUGUI>().text = instance.instanceName;
-                instanceGameObject.transform.GetChild(2).GetComponent<TextMeshProUGUI>().text = instance.versionName + " - Fabric";
+                instanceGameObject.transform.GetChild(1).GetComponent<TextMeshProUGUI>().text = instance.instanceName; instanceGameObject.transform.GetChild(2).GetComponent<TextMeshProUGUI>().text = instance.versionName + " - Fabric";
                 instanceGameObject.transform.SetParent(instanceArray.transform, false);
                 instanceGameObject.name = instance.instanceName;
 
@@ -83,9 +104,11 @@ public class InstanceManager : MonoBehaviour
                     GameObject instanceObject = GameObject.Find(EventSystem.current.currentSelectedGameObject.transform.name);
                     CreateInstanceInfoPage(instanceObject.name);
                 });
-                
+
                 if (instance.instanceImageURL != null)
+                {
                     apiHandler.DownloadImage(instance.instanceImageURL, instanceGameObject.GetComponentInChildren<RawImage>());
+                }
             }
             SetInstanceData();
         }

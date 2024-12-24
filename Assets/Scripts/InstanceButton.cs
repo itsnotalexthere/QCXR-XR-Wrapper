@@ -1,4 +1,6 @@
+using System.IO;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.XR.Management;
 
@@ -6,19 +8,33 @@ public class InstanceButton : MonoBehaviour
 {
     public static string currInstName;
     private bool hasDefaulted;
+    public ConfigHandler.Config config;
+    public string configPath;
 
     public CanvasGroup ScreenFade;
     
-    private void Update()
+    public void Update()
     {
-        if (Application.platform == RuntimePlatform.WindowsEditor)
+        if (Application.platform != RuntimePlatform.Android)
             return;
         currInstName = JNIStorage.instance.instancesDropdown.options[JNIStorage.instance.instancesDropdown.value].text;
     }
 
+    public void SelectInstance()
+    {
+        if (Application.platform != RuntimePlatform.Android) return;
+        currInstName = JNIStorage.instance.instancesDropdown.options[JNIStorage.instance.instancesDropdown.value].text;
+        configPath = Application.persistentDataPath + "/launcher.conf";
+        string configFile = File.ReadAllText(configPath);
+        config = JsonConvert.DeserializeObject<ConfigHandler.Config>(configFile);
+        config.lastSelectedInstance = JNIStorage.instance.instancesDropdown.value;
+        string JSON = JsonConvert.SerializeObject(config, Formatting.Indented);
+        File.WriteAllText(configPath, JSON);
+    }
+
     private static void CreateDefaultInstance(string name)
     {
-        JNIStorage.apiClass.CallStatic<AndroidJavaObject>("createNewInstance", JNIStorage.activity, JNIStorage.instancesObj, name, true, name, null);
+        JNIStorage.apiClass.CallStatic<AndroidJavaObject>("createNewInstance", JNIStorage.activity, JNIStorage.instancesObj, name, true, name, "Fabric", null);
         JNIStorage.instance.uiHandler.SetAndShowError(currInstName + " is now installing.");
         JNIStorage.instance.UpdateInstances();
     }
@@ -49,7 +65,7 @@ public class InstanceButton : MonoBehaviour
             XRGeneralSettings.Instance.Manager.activeLoader.Stop();
             XRGeneralSettings.Instance.Manager.activeLoader.Deinitialize();
             
-            Application.Unload();
+            Application.Quit();
             JNIStorage.apiClass.CallStatic("launchInstance", JNIStorage.activity, JNIStorage.accountObj, instance.raw);
         }
         LeanTween.value(ScreenFade.gameObject,0, 1, 1).setOnUpdate(alpha => ScreenFade.alpha = alpha).setOnComplete(() => FinishAnim());
